@@ -427,6 +427,9 @@ func (ds *DataSource) findBestTask(prop *property.PhysicalProperty) (t task, err
 
 	t = invalidTask
 	candidates := ds.skylinePruning(prop)
+	for _, can := range candidates {
+		logutil.BgLogger().Info("candidates type", zap.Int64("type", int64(can.path.storeType)))
+	}
 	for _, candidate := range candidates {
 		path := candidate.path
 		if path.partialIndexPaths != nil {
