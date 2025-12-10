@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ngaut/log"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tidb/pkg/kv"
 	"github.com/pingcap/tidb/pkg/meta/model"
@@ -26,6 +27,7 @@ import (
 	"github.com/pingcap/tidb/pkg/types"
 	"github.com/pingcap/tidb/pkg/util/chunk"
 	"github.com/pingcap/tidb/pkg/util/codec"
+	"go.uber.org/zap"
 )
 
 // decoder contains base util for decode row.
@@ -208,8 +210,16 @@ func (decoder *ChunkDecoder) DecodeToChunk(rowData []byte, handle kv.Handle, chk
 	if err != nil {
 		return err
 	}
+	log.Info("decode row to chunk",
+		zap.Int("numCols", len(decoder.columns)),
+		zap.Int64s("handleColIDs", decoder.handleColIDs),
+		zap.String("handleType", fmt.Sprintf("%T", handle)),
+	)
 
 	for colIdx := range decoder.columns {
+		log.Info("decode column",
+			zap.Int("colIdx", colIdx),
+			zap.Int64("colID", decoder.columns[colIdx].ID))
 		col := &decoder.columns[colIdx]
 		// fill the virtual column value after row calculation
 		if col.VirtualGenCol {
@@ -230,6 +240,12 @@ func (decoder *ChunkDecoder) DecodeToChunk(rowData []byte, handle kv.Handle, chk
 			}
 			continue
 		}
+		log.Info("column not found",
+			zap.Int("colIdx", colIdx),
+			zap.Int64("colID", col.ID),
+			zap.Bool("isNil", isNil),
+			zap.Bool("notFound", notFound),
+		)
 
 		// Only try to decode handle when there is no corresponding column in the value.
 		// This is because the information in handle may be incomplete in some cases.
