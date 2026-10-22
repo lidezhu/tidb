@@ -209,6 +209,8 @@ type Config struct {
 	PromRegistry  promutil.Registry `json:"-"`
 	ExtStorage    storeapi.Storage  `json:"-"`
 	MinTLSVersion uint16            `json:"-"`
+	// TLSCipherSuites overrides the TLS 1.0–1.2 cipher suites when non-nil.
+	TLSCipherSuites []uint16 `json:"-"`
 
 	IOTotalBytes *atomic.Uint64
 	Net          string
@@ -334,6 +336,10 @@ func (conf *Config) GetDriverConfig(db string) *mysql.Config {
 	driverCfg.MaxAllowedPacket = 0
 	if conf.Security.TLS != nil {
 		driverCfg.TLS = conf.Security.TLS
+		if conf.TLSCipherSuites != nil {
+			driverCfg.TLS = conf.Security.TLS.Clone()
+			driverCfg.TLS.CipherSuites = append([]uint16(nil), conf.TLSCipherSuites...)
+		}
 	} else {
 		// Use TLS first.
 		driverCfg.AllowFallbackToPlaintext = true
@@ -346,6 +352,7 @@ func (conf *Config) GetDriverConfig(db string) *mysql.Config {
 			InsecureSkipVerify: true,
 			MinVersion:         minTLSVersion,
 			NextProtos:         []string{"h2", "http/1.1"}, // specify `h2` to let Go use HTTP/2.
+			CipherSuites:       append([]uint16(nil), conf.TLSCipherSuites...),
 		}
 	}
 	if conf.AllowCleartextPasswords {

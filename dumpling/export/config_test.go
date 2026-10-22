@@ -3,6 +3,7 @@
 package export
 
 import (
+	"crypto/tls"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,19 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 )
+
+func TestGetDriverConfigTLSCipherSuites(t *testing.T) {
+	conf := &Config{TLSCipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA}}
+	config := conf.GetDriverConfig("")
+	require.Equal(t, conf.TLSCipherSuites, config.TLS.CipherSuites)
+	require.True(t, config.AllowFallbackToPlaintext)
+
+	conf.Security.TLS = &tls.Config{MinVersion: tls.VersionTLS12}
+	config = conf.GetDriverConfig("")
+	require.Equal(t, conf.TLSCipherSuites, config.TLS.CipherSuites)
+	require.Nil(t, conf.Security.TLS.CipherSuites)
+	require.False(t, config.AllowFallbackToPlaintext)
+}
 
 func TestCreateExternalStorage(t *testing.T) {
 	mockConfig := defaultConfigForTest(t)
